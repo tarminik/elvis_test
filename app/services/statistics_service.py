@@ -110,49 +110,97 @@ class StatisticsService:
     
     async def get_7_day_streak_users(self) -> List[Dict[str, Any]]:
         """Get users with 7-day achievement streaks."""
-        # SQL query to find users with 7 consecutive days of achievements
-        query = text("""
-            WITH user_achievement_dates AS (
-                SELECT 
-                    ua.user_id,
-                    u.username,
-                    DATE(ua.awarded_at) as achievement_date
-                FROM user_achievements ua
-                JOIN users u ON ua.user_id = u.id
-                GROUP BY ua.user_id, u.username, DATE(ua.awarded_at)
-            ),
-            consecutive_days AS (
+        # Check if we're using SQLite (for tests) or PostgreSQL (for production)
+        engine_name = self.db.bind.dialect.name
+        
+        if engine_name == "sqlite":
+            # SQLite-compatible query
+            query = text("""
+                WITH user_achievement_dates AS (
+                    SELECT 
+                        ua.user_id,
+                        u.username,
+                        DATE(ua.awarded_at) as achievement_date
+                    FROM user_achievements ua
+                    JOIN users u ON ua.user_id = u.id
+                    GROUP BY ua.user_id, u.username, DATE(ua.awarded_at)
+                ),
+                consecutive_days AS (
+                    SELECT 
+                        user_id,
+                        username,
+                        achievement_date,
+                        DATE(achievement_date, '-' || (ROW_NUMBER() OVER (
+                            PARTITION BY user_id 
+                            ORDER BY achievement_date
+                        ) - 1) || ' day') as group_date
+                    FROM user_achievement_dates
+                ),
+                streak_groups AS (
+                    SELECT 
+                        user_id,
+                        username,
+                        group_date,
+                        COUNT(*) as consecutive_days_count,
+                        MIN(achievement_date) as streak_start,
+                        MAX(achievement_date) as streak_end
+                    FROM consecutive_days
+                    GROUP BY user_id, username, group_date
+                    HAVING COUNT(*) >= 7
+                )
                 SELECT 
                     user_id,
                     username,
-                    achievement_date,
-                    achievement_date - INTERVAL '1 day' * ROW_NUMBER() OVER (
-                        PARTITION BY user_id 
-                        ORDER BY achievement_date
-                    ) as group_date
-                FROM user_achievement_dates
-            ),
-            streak_groups AS (
+                    consecutive_days_count,
+                    streak_start,
+                    streak_end
+                FROM streak_groups
+                ORDER BY consecutive_days_count DESC, user_id
+            """)
+        else:
+            # PostgreSQL-compatible query
+            query = text("""
+                WITH user_achievement_dates AS (
+                    SELECT 
+                        ua.user_id,
+                        u.username,
+                        DATE(ua.awarded_at) as achievement_date
+                    FROM user_achievements ua
+                    JOIN users u ON ua.user_id = u.id
+                    GROUP BY ua.user_id, u.username, DATE(ua.awarded_at)
+                ),
+                consecutive_days AS (
+                    SELECT 
+                        user_id,
+                        username,
+                        achievement_date,
+                        achievement_date - INTERVAL '1 day' * ROW_NUMBER() OVER (
+                            PARTITION BY user_id 
+                            ORDER BY achievement_date
+                        ) as group_date
+                    FROM user_achievement_dates
+                ),
+                streak_groups AS (
+                    SELECT 
+                        user_id,
+                        username,
+                        group_date,
+                        COUNT(*) as consecutive_days_count,
+                        MIN(achievement_date) as streak_start,
+                        MAX(achievement_date) as streak_end
+                    FROM consecutive_days
+                    GROUP BY user_id, username, group_date
+                    HAVING COUNT(*) >= 7
+                )
                 SELECT 
                     user_id,
                     username,
-                    group_date,
-                    COUNT(*) as consecutive_days_count,
-                    MIN(achievement_date) as streak_start,
-                    MAX(achievement_date) as streak_end
-                FROM consecutive_days
-                GROUP BY user_id, username, group_date
-                HAVING COUNT(*) >= 7
-            )
-            SELECT 
-                user_id,
-                username,
-                consecutive_days_count,
-                streak_start,
-                streak_end
-            FROM streak_groups
-            ORDER BY consecutive_days_count DESC, user_id
-        """)
+                    consecutive_days_count,
+                    streak_start,
+                    streak_end
+                FROM streak_groups
+                ORDER BY consecutive_days_count DESC, user_id
+            """)
         
         result = await self.db.execute(query)
         streak_users = result.all()

@@ -17,22 +17,26 @@ class UserService:
     
     async def create_user(self, user: UserCreate) -> User:
         """Create a new user."""
-        # Check if username already exists
-        result = await self.db.execute(
-            select(User).filter(User.username == user.username)
-        )
-        existing_user = result.scalar_one_or_none()
-        if existing_user:
-            raise ValueError("Username already exists")
-        
-        db_user = User(
-            username=user.username,
-            language=user.language
-        )
-        self.db.add(db_user)
-        await self.db.commit()
-        await self.db.refresh(db_user)
-        return db_user
+        try:
+            # Check if username already exists
+            result = await self.db.execute(
+                select(User).filter(User.username == user.username)
+            )
+            existing_user = result.scalar_one_or_none()
+            if existing_user:
+                raise ValueError("Username already exists")
+            
+            db_user = User(
+                username=user.username,
+                language=user.language
+            )
+            self.db.add(db_user)
+            await self.db.commit()
+            await self.db.refresh(db_user)
+            return db_user
+        except Exception as e:
+            await self.db.rollback()
+            raise e
     
     async def get_user(self, user_id: int) -> Optional[User]:
         """Get user by ID."""

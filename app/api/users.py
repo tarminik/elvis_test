@@ -15,8 +15,19 @@ router = APIRouter()
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     """Create a new user."""
-    service = UserService(db)
-    return await service.create_user(user)
+    try:
+        service = UserService(db)
+        return await service.create_user(user)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -42,5 +53,16 @@ async def get_users(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(
 @router.get("/{user_id}/achievements")
 async def get_user_achievements(user_id: int, db: AsyncSession = Depends(get_db)):
     """Get user achievements in user's language."""
-    service = UserService(db)
-    return await service.get_user_achievements(user_id)
+    try:
+        service = UserService(db)
+        return await service.get_user_achievements(user_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )

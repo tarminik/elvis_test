@@ -41,5 +41,16 @@ async def get_achievement(achievement_id: int, db: AsyncSession = Depends(get_db
 @router.post("/award", status_code=status.HTTP_201_CREATED)
 async def award_achievement(award: UserAchievementCreate, db: AsyncSession = Depends(get_db)):
     """Award achievement to user."""
-    service = AchievementService(db)
-    return await service.award_achievement(award)
+    try:
+        service = AchievementService(db)
+        return await service.award_achievement(award)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )

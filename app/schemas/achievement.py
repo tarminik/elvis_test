@@ -1,6 +1,6 @@
 """Achievement schemas."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Optional
 
 
@@ -15,7 +15,12 @@ class AchievementBase(BaseModel):
 
 class AchievementCreate(AchievementBase):
     """Achievement creation schema."""
-    pass
+    
+    @validator('points')
+    def validate_points(cls, v):
+        if v <= 0:
+            raise ValueError('Points must be positive')
+        return v
 
 
 class AchievementResponse(AchievementBase):

@@ -1,6 +1,6 @@
 """User achievement schemas."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
@@ -20,5 +20,4 @@ class UserAchievementResponse(UserAchievementBase):
     id: int
     awarded_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

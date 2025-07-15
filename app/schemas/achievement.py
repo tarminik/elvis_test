@@ -1,6 +1,6 @@
 """Achievement schemas."""
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 from typing import Optional
 
 
@@ -27,8 +27,7 @@ class AchievementResponse(AchievementBase):
     """Achievement response schema."""
     id: int
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AchievementLocalized(BaseModel):
@@ -38,5 +37,4 @@ class AchievementLocalized(BaseModel):
     description: str
     points: int
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -165,13 +165,17 @@ class TestUserEndpoints:
         assert response.status_code == 422  # Validation error
 
     @pytest.mark.asyncio
-    async def test_create_user_missing_fields(self, client: AsyncClient):
-        """Test creating user with missing required fields."""
+    async def test_create_user_with_default_language(self, client: AsyncClient):
+        """Test creating user with missing language field sets default language."""
         user_data = {
-            "username": "testuser"
+            "username": "default_lang_user"
             # Missing language field
         }
         
         response = await client.post("/users/", json=user_data)
         
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 201  # Should be successfully created
+        response_json = response.json()
+        assert response_json["username"] == "default_lang_user"
+        assert "language" in response_json
+        assert response_json["language"] == "ru"  # Проверяем язык по умолчанию

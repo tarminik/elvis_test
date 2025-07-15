@@ -208,13 +208,16 @@ class StatisticsService:
         if not streak_users:
             return []
         
-        return [
-            {
+        response_data = []
+        for user in streak_users:
+            # Handle both string (SQLite) and date (PostgreSQL) formats
+            streak_start = user.streak_start if isinstance(user.streak_start, str) else user.streak_start.isoformat()
+            streak_end = user.streak_end if isinstance(user.streak_end, str) else user.streak_end.isoformat()
+            response_data.append({
                 "user_id": user.user_id,
                 "username": user.username,
                 "consecutive_days": user.consecutive_days_count,
-                "streak_start": user.streak_start.isoformat(),
-                "streak_end": user.streak_end.isoformat()
-            }
-            for user in streak_users
-        ]
+                "streak_start": streak_start,
+                "streak_end": streak_end
+            })
+        return response_data
